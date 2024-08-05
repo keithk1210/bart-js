@@ -46,10 +46,37 @@
 </head>
 <body>
     <script>
+
+        async function uploadData(userID,csvString) {
+
+            const data = {
+                userID: userID,
+                csvString: csvString
+            };
+
+            try {
+                const response = await fetch('/upload/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const responseData = await response.json();
+                console.log('Data uploaded successfully:', responseData);
+            } catch (error) {
+                console.error('Error sending data:', error);
+            }
+        }
         
 
         const trialCount = 10; // Number of trials
-        let totalScore = 0;
+        var totalScore = 0;
 
         // Instructions
         const instructions = {
@@ -75,7 +102,7 @@
                         <div class="balloon" id="balloon" style="width:${balloonSize}px; height:${balloonSize * 1.4}px;"></div>
                         <button id="inflateButton">Inflate</button>
                         <button id="collectButton">Collect</button>
-                        <div class="score-board">Current Score: ${totalScore}</div>
+                        <div class="score-board"></div>
                     </div>
                 `,
                 choices: [], // No choices needed, we're using custom buttons
@@ -83,6 +110,8 @@
                     const balloon = document.getElementById('balloon');
                     const inflateButton = document.getElementById('inflateButton');
                     const collectButton = document.getElementById('collectButton');
+
+                    document.getElementsByClassName('score-board')[0].innerText = `Current Score: ${totalScore}`
 
                     inflateButton.addEventListener('click', () => {
                         pumps++;
@@ -107,12 +136,19 @@
                     collectButton.addEventListener('click', () => {
                         const points = pumps;
                         totalScore += points;
+                        //console.log("collect button clicked!")
+                        
+                        //console.log(getElementsByClassName('score-board')[0])
                         jsPsych.finishTrial({
                             pumps: pumps,
                             popped: false,
                             points: points
                         });
                     });
+                },
+                on_finish: (data) => {
+                    data.pumps = pumps;
+                    data.maxPumps = maxPumps;
                 }
             };
         };
@@ -133,6 +169,11 @@
                     <p>Thank you for participating!</p>
                     <p>Press any key to end the experiment.</p>
                 `;
+            },
+            on_finish: function() {
+                const csv = jsPsych.data.get().csv();
+                const userID = Math.random().toString(36).substr(2, 9); // Generate random user ID
+                uploadData(userID,csv);
             }
         };
 
